@@ -1,0 +1,17 @@
+# Vercel Ignore File
+
+# Ignore dataset files (Read locally by user upload, no need to host in build)
+*.csv
+*.xlsx
+BMW_Car_Sales_Classification.csv
+
+# Ignore local environment
+venv/
+env/
+.venv/
+__pycache__/
+
+# Ignore local configs
+.vscode/
+.env
+.streamlit/

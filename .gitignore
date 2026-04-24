@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+env/
+.venv/
+
+# Streamlit specific
+.streamlit/
+
+# Dataset files (Prevent uploading huge CSVs to GitHub)
+*.csv
+*.xlsx
+BMW_Car_Sales_Classification.csv
+
+# OS generated files
+.DS_Store
+Thumbs.db
