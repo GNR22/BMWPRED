@@ -8,6 +8,7 @@ from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 import plotly.figure_factory as ff
+import time
 
 # --- APP CONFIGURATION ---
 st.set_page_config(page_title="BMW Sales BI Tool", layout="wide")
@@ -22,11 +23,10 @@ if uploaded_file is not None:
     df_raw = pd.read_csv(uploaded_file)
     
     # --- CHRONOLOGICAL SORTING ---
-    # Sorting by 'Year' ensures the data is in chronological order
     if 'Year' in df_raw.columns:
         df_raw = df_raw.sort_values(by='Year', ascending=True)
     
-    # --- RECORD SLIDER (User Control) ---
+    # --- RECORD SLIDER ---
     total_rows = df_raw.shape[0]
     st.write("### 🎚️ Data Sampling Control")
     num_records = st.slider(
@@ -37,7 +37,6 @@ if uploaded_file is not None:
         step=500
     )
     
-    # Apply the sample (we take the first 'n' records of the sorted data to keep it chronological)
     df = df_raw.head(num_records)
     st.info(f"Using the first **{num_records}** chronological records out of {total_rows} available.")
 
@@ -53,34 +52,34 @@ if uploaded_file is not None:
     if target_col not in df.columns:
         st.error(f"Critical Error: Column '{target_col}' not found in CSV!")
     else:
-        # Automatically exclude ID and Volume columns to prevent data leakage
         cols_to_drop = [c for c in ['Model', 'Sales_Volume', 'Unnamed: 0', 'ID'] if c in df.columns]
         df_clean = df.drop(columns=cols_to_drop).dropna()
         
         st.write(f"**Target Variable:** `{target_col}`")
         st.write(f"**Excluded Features:** `{', '.join(cols_to_drop)}`")
         
+        # --- THE TRAINING BUTTON ---
         if st.button("🚀 Train & Compare Models"):
+            # ⏱️ START THE TIMER HERE
+            start_time = time.time() 
+
             with st.spinner(f"Processing and training models on {num_records} records..."):
                 
                 # --- PREPARE DATA ---
                 X = df_clean.drop(columns=[target_col])
                 y = df_clean[target_col]
                 
-                # Check for class balance
                 if len(y.unique()) < 2:
-                    st.error("❌ Error: The current sample only has one classification. Please increase the slider to include more years/records.")
+                    st.error("❌ Error: The current sample only has one classification.")
                 else:
-                    # Encoding
+                    # Encoding & Scaling
                     X = pd.get_dummies(X, drop_first=True)
                     le = LabelEncoder()
                     y = le.fit_transform(y)
                     
-                    # Scaling
                     scaler = StandardScaler()
                     X_scaled = scaler.fit_transform(X)
                     
-                    # Split (80% Train, 20% Test)
                     X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
 
                     # --- 3. MODEL IMPLEMENTATION ---
@@ -122,7 +121,6 @@ if uploaded_file is not None:
                             col_m3.metric("Recall", f"{rec:.2%}")
                             col_m4.metric("F1-Score", f"{f1:.2%}")
                             
-                            st.write("**Confusion Matrix**")
                             fig = ff.create_annotated_heatmap(
                                 z=cm, 
                                 x=[f"Predicted {c}" for c in le.classes_],
@@ -131,21 +129,29 @@ if uploaded_file is not None:
                             )
                             st.plotly_chart(fig, use_container_width=True)
 
+                    # ⏱️ STOP THE TIMER HERE (After all models are done)
+                    end_time = time.time()
+                    duration_seconds = end_time - start_time
+
                     # --- 4. MODEL COMPARISON & CONCLUSION ---
                     st.divider()
                     st.header("4. Model Comparison & Conclusion")
                     
+                    # Display Time Result
+                    if duration_seconds < 60:
+                        st.info(f"⏱️ **Total Processing Time:** {duration_seconds:.2f} seconds")
+                    else:
+                        st.info(f"⏱️ **Total Processing Time:** {duration_seconds/60:.2f} minutes")
+
                     res_df = pd.DataFrame(results).set_index("Model")
                     col_table, col_chart = st.columns([1, 1])
                     
                     with col_table:
-                        st.write("#### Performance Summary Table")
                         st.dataframe(res_df.style.highlight_max(axis=0, color='#2e7d32'), use_container_width=True)
                     
                     with col_chart:
-                        st.write("#### Accuracy Comparison")
                         st.bar_chart(res_df['Accuracy'])
                         
                     best_model = res_df['Accuracy'].idxmax()
                     best_acc = res_df['Accuracy'].max()
-                    st.success(f"**Conclusion:** Based on the sample size of {num_records} records, the **{best_model}** performed the best with an overall accuracy of **{best_acc:.2%}**.")
+                    st.success(f"**Conclusion:** The **{best_model}** performed best with **{best_acc:.2%}** accuracy.")
