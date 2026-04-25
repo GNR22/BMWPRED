@@ -127,6 +127,15 @@ if uploaded_file is not None:
                                 y=[f"Actual {c}" for c in le.classes_],
                                 colorscale='Blues'
                             )
+
+                            # Add this to increase font sizes
+                            fig.update_layout(
+                                font=dict(size=40),  # Increase font size for labels
+                                xaxis=dict(tickfont=dict(size=20)),
+                                yaxis=dict(tickfont=dict(size=20))
+                            )
+                            fig.update_annotations(font=dict(size=30))  # Increase annotation text size
+
                             st.plotly_chart(fig, use_container_width=True)
 
                     # ⏱️ STOP THE TIMER HERE (After all models are done)
